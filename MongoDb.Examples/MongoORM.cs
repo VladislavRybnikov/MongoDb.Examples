@@ -14,8 +14,10 @@ using MongoDB.Driver.Linq;
 namespace MongoDb.Examples
 {
 
-    public interface IRepository<T> where T : class
+    public interface IMongoDbSet<T> : IMongoQueryable<T> where T : class
     {
+        IMongoDbSet<T> FromCollection(string name);
+
         void Insert(T value);
     }
 
@@ -47,19 +49,30 @@ namespace MongoDb.Examples
         }
     }
 
-    public class MongoDbSet<T> : IRepository<T>, IMongoQueryable<T> where T : class
+    public class MongoDbSet<T> : IMongoDbSet<T> where T : class
     {
         private readonly Lazy<IMongoDatabase> _db;
         private readonly Lazy<IMongoCollection<T>> _collection;
         private readonly Lazy<IMongoQueryable<T>> _queryable;
 
-        public MongoDbSet(Lazy<IMongoDatabase> db)
+        public MongoDbSet(Lazy<IMongoDatabase> db) : this(db, null)
+        {
+        }
+
+        public MongoDbSet(Lazy<IMongoDatabase> db, Func<IMongoDatabase, IMongoCollection<T>> collectionSelector)
         {
             var t = typeof(T);
             _db = db;
-            _collection = new Lazy<IMongoCollection<T>>(() => _db.Value.GetCollection<T>(t.Name + "s"));
+
+            var getCollection = collectionSelector != null 
+                ? () => collectionSelector(_db.Value) 
+                : (Func<IMongoCollection<T>>)(() => _db.Value.GetCollection<T>(t.Name + "s"));
+
+            _collection = new Lazy<IMongoCollection<T>>(getCollection);
             _queryable = new Lazy<IMongoQueryable<T>>(() => _collection.Value.AsQueryable());
         }
+
+        public IMongoDbSet<T> FromCollection(string name) => new MongoDbSet<T>(_db, db => db.GetCollection<T>(name));
 
         public void Insert(T value)
         {

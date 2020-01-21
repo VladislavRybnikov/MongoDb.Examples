@@ -17,6 +17,11 @@ namespace MongoDb.Examples
                 where user.Name.Length > 5
                 select user.Name;
 
+            var res2 = 
+                from user in db.Users.FromCollection("users2")
+                where user.Name.Length > 5
+                select user.Name;
+
             res.ToList().ForEach(Console.WriteLine);
         }
     }
