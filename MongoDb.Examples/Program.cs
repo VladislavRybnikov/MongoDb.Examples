@@ -13,7 +13,11 @@ namespace MongoDb.Examples
 
             var db = new MyMongoDbContext();
 
-            db.Users.ToList().ForEach(x => Console.WriteLine(x.Name));
+            var res = from user in db.Users
+                where user.Name.Length > 5
+                select user.Name;
+
+            res.ToList().ForEach(Console.WriteLine);
         }
     }
 
